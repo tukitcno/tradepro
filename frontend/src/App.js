@@ -19,6 +19,16 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   return children;
 };
 
+const PaymentProtectedRoute = ({ children }) => {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/login?redirect=payment" />;
+  }
+  
+  return children;
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -28,20 +38,16 @@ function App() {
           <Debug />
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/wallet" element={
-              <ProtectedRoute>
+              <PaymentProtectedRoute>
                 <Wallet />
-              </ProtectedRoute>
+              </PaymentProtectedRoute>
             } />
             <Route path="/referral" element={
-              <ProtectedRoute>
+              <PaymentProtectedRoute>
                 <Referral />
-              </ProtectedRoute>
+              </PaymentProtectedRoute>
             } />
             <Route path="/admin" element={
               <ProtectedRoute adminOnly={true}>

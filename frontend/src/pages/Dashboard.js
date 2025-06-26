@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../components/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const { user, API_URL } = useAuth();
+  const navigate = useNavigate();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [balance, setBalance] = useState(0);
   const [currentPrice, setCurrentPrice] = useState(1.2345);
   const [tradeAmount, setTradeAmount] = useState(10);
@@ -30,6 +33,7 @@ const Dashboard = () => {
   }, [API_URL]);
 
   const fetchUserData = async () => {
+    if (!user) return;
     try {
       const response = await axios.get(`${API_URL}/api/user/profile`);
       setBalance(response.data.balance);
@@ -39,6 +43,7 @@ const Dashboard = () => {
   };
 
   const fetchTrades = async () => {
+    if (!user) return;
     try {
       const response = await axios.get(`${API_URL}/api/trades/my-trades`);
       setTrades(response.data.trades);
@@ -48,6 +53,11 @@ const Dashboard = () => {
   };
 
   const placeTrade = async (direction) => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+    
     if (tradeAmount > balance) {
       toast.error('Insufficient balance');
       return;
@@ -165,32 +175,50 @@ const Dashboard = () => {
           {/* Balance */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h3 className="text-lg font-bold mb-2">Account Balance</h3>
-            <div className="text-3xl font-bold text-accent">${balance.toFixed(2)}</div>
+            {user ? (
+              <div className="text-3xl font-bold text-accent">${balance.toFixed(2)}</div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="text-lg text-gray-500 mb-2">Login to view balance</div>
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="bg-accent text-white px-4 py-2 rounded-lg"
+                >
+                  Login
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Recent Trades */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h3 className="text-lg font-bold mb-4">Recent Trades</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {trades.slice(0, 5).map((trade) => (
-                <div key={trade.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                  <div>
-                    <div className="font-medium">${trade.amount}</div>
-                    <div className="text-xs text-gray-500">
-                      {trade.direction.toUpperCase()}
+            {user ? (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {trades.slice(0, 5).map((trade) => (
+                  <div key={trade.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <div>
+                      <div className="font-medium">${trade.amount}</div>
+                      <div className="text-xs text-gray-500">
+                        {trade.direction.toUpperCase()}
+                      </div>
+                    </div>
+                    <div className={`font-bold ${
+                      trade.status === 'won' ? 'text-accent' : 
+                      trade.status === 'lost' ? 'text-danger' : 'text-warning'
+                    }`}>
+                      {trade.status === 'pending' ? 'Active' : 
+                       trade.status === 'won' ? `+$${trade.payout?.toFixed(2)}` : 
+                       `-$${trade.amount}`}
                     </div>
                   </div>
-                  <div className={`font-bold ${
-                    trade.status === 'won' ? 'text-accent' : 
-                    trade.status === 'lost' ? 'text-danger' : 'text-warning'
-                  }`}>
-                    {trade.status === 'pending' ? 'Active' : 
-                     trade.status === 'won' ? `+$${trade.payout?.toFixed(2)}` : 
-                     `-$${trade.amount}`}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Login to view your trades</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -27,6 +27,7 @@ router.post('/login-password', async (req, res) => {
   const { identifier, password } = req.body;
   
   try {
+    console.log('Password login attempt for:', identifier);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isEmail = emailRegex.test(identifier);
     
@@ -36,16 +37,25 @@ router.post('/login-password', async (req, res) => {
     
     const result = await pool.query(userQuery, [identifier]);
     const user = result.rows[0];
+    
+    console.log('User found:', user ? 'Yes' : 'No');
+    if (user) console.log('Has password:', user.password ? 'Yes' : 'No');
 
-    if (!user || !user.password) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+    
+    if (!user.password) {
+      return res.status(400).json({ message: 'Password not set' });
     }
 
     const bcrypt = require('bcryptjs');
     const validPassword = await bcrypt.compare(password, user.password);
     
+    console.log('Password valid:', validPassword);
+    
     if (!validPassword) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Invalid password' });
     }
 
     const token = jwt.sign(
@@ -66,7 +76,7 @@ router.post('/login-password', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Password login error:', error);
+    console.error('Password login error for', identifier, ':', error.message);
     res.status(500).json({ message: 'Login failed' });
   }
 });
@@ -137,6 +147,16 @@ router.get('/me', authenticateToken, (req, res) => {
       balance: parseFloat(req.user.balance)
     }
   });
+});
+
+// Test demo accounts
+router.get('/test-demo', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT email, phone, role, balance, password IS NOT NULL as has_password FROM users WHERE email IN ($1, $2)', ['admin@tradex.com', 'demo@tradex.com']);
+    res.json({ accounts: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;
