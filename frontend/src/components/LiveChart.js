@@ -13,7 +13,7 @@ const FIATS = [
 
 const SOCKET_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-const LiveChart = ({ onTrade, lastTradeResult }) => {
+const LiveChart = ({ onTrade, lastTradeResult, selectedSignal }) => {
   const chartContainerRef = useRef();
   const chartRef = useRef();
   const candleSeriesRef = useRef();
@@ -83,6 +83,12 @@ const LiveChart = ({ onTrade, lastTradeResult }) => {
     }
   }, [lastTradeResult]);
 
+  useEffect(() => {
+    if (selectedSignal) {
+      setFiat(selectedSignal.pair.split('/')[0]);
+    }
+  }, [selectedSignal]);
+
   // Add trade placement handler
   const handlePlaceTrade = async () => {
     if (!prediction || !amount || !duration) return;
@@ -101,10 +107,8 @@ const LiveChart = ({ onTrade, lastTradeResult }) => {
     <div className="w-full max-w-2xl mx-auto p-4 bg-[#23272f] rounded-xl shadow-2xl animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-gray-300">Fiat:</span>
-          <select value={fiat} onChange={e => setFiat(e.target.value)} className="bg-[#181c24] text-white rounded px-2 py-1">
-            {FIATS.map(f => <option key={f.code} value={f.code}>{f.label}</option>)}
-          </select>
+          <span className="text-gray-300">Pair:</span>
+          <span className="text-white font-bold">{selectedSignal ? selectedSignal.pair : fiat}</span>
         </div>
         <div className="text-2xl font-bold text-green-400 animate-pulse">{price ? `${price.toFixed(5)} ${fiat}` : '--'}</div>
       </div>

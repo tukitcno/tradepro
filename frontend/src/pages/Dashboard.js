@@ -6,6 +6,7 @@ import axios from 'axios';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 import LiveChart from '../components/LiveChart';
+import TradingSignals from '../components/TradingSignals';
 
 const Dashboard = () => {
   const { user, API_URL } = useAuth();
@@ -19,6 +20,21 @@ const Dashboard = () => {
   const [trades, setTrades] = useState([]);
   const [socket, setSocket] = useState(null);
   const [lastTradeResult, setLastTradeResult] = useState(null);
+
+  const signalPairs = [
+    { pair: 'USD/ARS (OTC)', duration: 15, time: '03:57:56' },
+    { pair: 'NZD/JPY (OTC)', duration: 10, time: '03:57:56' },
+    { pair: 'Pfizer Inc (OTC)', duration: 15, time: '03:57:56' },
+    { pair: 'Gold', duration: 15, time: '03:57:56' },
+    { pair: 'USD/TRY (OTC)', duration: 30, time: '03:57:56' },
+    { pair: 'Intel (OTC)', duration: 10, time: '03:57:56' },
+    { pair: 'UKBrent (OTC)', duration: 15, time: '03:57:56' },
+    { pair: 'CAD/JPY (OTC)', duration: 10, time: '03:57:56' },
+    { pair: 'USD/CAD (OTC)', duration: 5, time: '03:57:56' },
+    { pair: 'USD/EGP (OTC)', duration: 10, time: '03:57:56' },
+    { pair: 'EUR/SGD (OTC)', duration: 3, time: '03:57:56' },
+  ];
+  const [selectedSignal, setSelectedSignal] = useState(signalPairs[0]);
 
   useEffect(() => {
     fetchUserData();
@@ -108,13 +124,13 @@ const Dashboard = () => {
       return;
     }
     try {
-      const response = await axios.post(`${API_URL}/api/trades/place`, {
+      const tradeRes = await axios.post(`${API_URL}/api/trades/place`, {
         amount,
         direction,
         duration,
         fiat
       });
-      if (response.data.success) {
+      if (tradeRes.data.success) {
         toast.success(`${direction.toUpperCase()} trade placed!`);
         setActiveTimer(duration);
         fetchUserData();
@@ -127,16 +143,19 @@ const Dashboard = () => {
           if (latest) setLastTradeResult(latest);
         }, duration * 1000 + 1000);
       }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Trade failed');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Trade failed');
     }
   };
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-[#181c24] to-[#23272f] flex flex-col items-center justify-center animate-fade-in">
-        <h1 className="text-4xl font-extrabold text-white mb-8 drop-shadow-lg tracking-tight animate-slide-down">Live Trading</h1>
-        <LiveChart onTrade={handleLiveChartTrade} lastTradeResult={lastTradeResult} />
+      <div className="flex min-h-screen bg-[#10131a]">
+        <TradingSignals signals={signalPairs} onSelect={setSelectedSignal} />
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <h1 className="text-4xl font-extrabold text-white mb-8 drop-shadow-lg tracking-tight animate-slide-down">Live Trading</h1>
+          <LiveChart onTrade={handleLiveChartTrade} lastTradeResult={lastTradeResult} selectedSignal={selectedSignal} />
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Trading Panel */}
