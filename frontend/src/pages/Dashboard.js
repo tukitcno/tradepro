@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
+import LiveChart from '../components/LiveChart';
 
 const Dashboard = () => {
   const { user, API_URL } = useAuth();
@@ -17,6 +18,7 @@ const Dashboard = () => {
   const [activeTimer, setActiveTimer] = useState(null);
   const [trades, setTrades] = useState([]);
   const [socket, setSocket] = useState(null);
+  const [lastTradeResult, setLastTradeResult] = useState(null);
 
   useEffect(() => {
     fetchUserData();
@@ -95,8 +97,47 @@ const Dashboard = () => {
     }
   };
 
+  // Pass trade handler to LiveChart
+  const handleLiveChartTrade = async ({ amount, direction, duration, fiat }) => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+    if (amount > balance) {
+      toast.error('Insufficient balance');
+      return;
+    }
+    try {
+      const response = await axios.post(`${API_URL}/api/trades/place`, {
+        amount,
+        direction,
+        duration,
+        fiat
+      });
+      if (response.data.success) {
+        toast.success(`${direction.toUpperCase()} trade placed!`);
+        setActiveTimer(duration);
+        fetchUserData();
+        fetchTrades();
+        // Poll for trade result after expiry
+        setTimeout(async () => {
+          await fetchTrades();
+          // Find the most recent trade for this user and fiat
+          const latest = trades.find(t => t.fiat === fiat && t.status !== 'pending');
+          if (latest) setLastTradeResult(latest);
+        }, duration * 1000 + 1000);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Trade failed');
+    }
+  };
+
   return (
     <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-[#181c24] to-[#23272f] flex flex-col items-center justify-center animate-fade-in">
+        <h1 className="text-4xl font-extrabold text-white mb-8 drop-shadow-lg tracking-tight animate-slide-down">Live Trading</h1>
+        <LiveChart onTrade={handleLiveChartTrade} lastTradeResult={lastTradeResult} />
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Trading Panel */}
         <div className="lg:col-span-2 space-y-6">

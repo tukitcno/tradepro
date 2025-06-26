@@ -1,13 +1,13 @@
 const express = require('express');
 const { pool } = require('../models/database');
+const { getCurrentPrice } = require('../services/priceEngine');
 const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
-// Place a trade
+// Place a trade (now supports fiat)
 router.post('/place', authenticateToken, async (req, res) => {
-  const { amount, direction, duration, entryPrice } = req.body;
+  const { amount, direction, duration, fiat } = req.body;
   const client = await pool.connect();
-  
   try {
     await client.query('BEGIN');
     
@@ -23,17 +23,20 @@ router.post('/place', authenticateToken, async (req, res) => {
     // Deduct balance
     await client.query('UPDATE users SET balance = balance - $1 WHERE id = $2', [amount, req.user.id]);
     
+    // Get entry price for fiat
+    const entryPrice = getCurrentPrice(fiat);
+    
     // Create trade
     const expiresAt = new Date(Date.now() + duration * 1000);
     const tradeResult = await client.query(`
-      INSERT INTO trades (user_id, amount, direction, duration, entry_price, expires_at)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+      INSERT INTO trades (user_id, amount, direction, duration, entry_price, expires_at, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *
     `, [req.user.id, amount, direction, duration, entryPrice, expiresAt]);
     
     await client.query('COMMIT');
     
     // Schedule trade resolution
-    setTimeout(() => resolveTrade(tradeResult.rows[0].id), duration * 1000);
+    setTimeout(() => resolveTrade(tradeResult.rows[0].id, fiat), duration * 1000);
     
     res.json({ success: true, trade: tradeResult.rows[0] });
   } catch (error) {
@@ -57,8 +60,8 @@ router.get('/my-trades', authenticateToken, async (req, res) => {
   }
 });
 
-// Resolve trade function
-async function resolveTrade(tradeId) {
+// Resolve trade function (now uses real price for fiat)
+async function resolveTrade(tradeId, fiat) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -66,12 +69,12 @@ async function resolveTrade(tradeId) {
     const tradeResult = await client.query('SELECT * FROM trades WHERE id = $1', [tradeId]);
     const trade = tradeResult.rows[0];
     
-    if (trade.status !== 'pending') return;
+    if (!trade || trade.status !== 'pending') return;
     
-    // Get current price (mock)
-    const currentPrice = 1.2345 + (Math.random() - 0.5) * 0.01;
-    const won = (trade.direction === 'up' && currentPrice > trade.entry_price) ||
-                (trade.direction === 'down' && currentPrice < trade.entry_price);
+    // Get current price for fiat
+    const exitPrice = getCurrentPrice(fiat);
+    const won = (trade.direction === 'up' && exitPrice > trade.entry_price) ||
+                (trade.direction === 'down' && exitPrice < trade.entry_price);
     
     let payout = 0;
     if (won) {
@@ -81,7 +84,7 @@ async function resolveTrade(tradeId) {
     
     await client.query(`
       UPDATE trades SET status = $1, exit_price = $2, payout = $3 WHERE id = $4
-    `, [won ? 'won' : 'lost', currentPrice, payout, tradeId]);
+    `, [won ? 'won' : 'lost', exitPrice, payout, tradeId]);
     
     await client.query('COMMIT');
   } catch (error) {
