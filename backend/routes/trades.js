@@ -6,7 +6,11 @@ const router = express.Router();
 
 // Place a trade (now supports fiat)
 router.post('/place', authenticateToken, async (req, res) => {
-  const { amount, direction, duration, fiat } = req.body;
+  const { amount, direction, duration, fiat, token } = req.body;
+  // Validate Tradersx Token
+  if (token !== process.env.TRADERSX_TOKEN) {
+    return res.status(403).json({ message: 'Invalid trading token' });
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const TRADERSX_TOKEN = process.env.REACT_APP_TRADERSX_TOKEN;
   
   // Test API connection
   const testConnection = async () => {
@@ -103,7 +104,8 @@ export const AuthProvider = ({ children }) => {
     loginWithPassword,
     sendOTP,
     logout,
-    API_URL
+    API_URL,
+    TRADERSX_TOKEN
   };
 
   return (

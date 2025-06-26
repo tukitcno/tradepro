@@ -54,9 +54,22 @@ app.get('/health', (req, res) => {
 });
 
 // Socket.IO connection handling
+const TRADERSX_TOKEN = process.env.TRADERSX_TOKEN;
+const LIVE_TRADING_ROOM = 'live-trading';
+
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
+  // Expect token as a query param or via auth event
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (token === TRADERSX_TOKEN) {
+    socket.join(LIVE_TRADING_ROOM);
+    console.log('User joined live-trading room:', socket.id);
+    socket.emit('authSuccess', { message: 'Live trading access granted.' });
+  } else {
+    console.log('User failed live trading auth:', socket.id);
+    socket.emit('authError', { message: 'Invalid Tradersx Token.' });
+    // Optionally disconnect: socket.disconnect();
+  }
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
@@ -74,7 +87,7 @@ async function startServer() {
       console.log('Database initialized successfully');
       
       // Start price engine
-      startPriceEngine(io);
+      startPriceEngine(io, LIVE_TRADING_ROOM);
       console.log('Price engine started');
       
       server.listen(PORT, () => {

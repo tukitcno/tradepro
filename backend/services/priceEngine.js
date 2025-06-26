@@ -15,7 +15,7 @@ let candles = {};
 let candleInterval = 60 * 1000; // 1 minute
 let candleTimer = null;
 
-const startPriceEngine = (io) => {
+const startPriceEngine = (io, liveTradingRoom = 'live-trading') => {
   // Start price updates every second
   setInterval(() => {
     // Generate realistic price movement
@@ -49,8 +49,8 @@ const startPriceEngine = (io) => {
         candles[fiat.code].low = Math.min(candles[fiat.code].low, fiatPrice);
         candles[fiat.code].close = fiatPrice;
       }
-      // Emit price update for this fiat
-      io.emit('priceUpdate', {
+      // Emit price update for this fiat ONLY to live-trading room
+      io.to(liveTradingRoom).emit('priceUpdate', {
         fiat: fiat.code,
         price: fiatPrice,
         symbol: fiat.symbol,
@@ -66,7 +66,7 @@ const startPriceEngine = (io) => {
     fiats.forEach(fiat => {
       const candle = candles[fiat.code];
       if (candle) {
-        io.emit('candleUpdate', {
+        io.to(liveTradingRoom).emit('candleUpdate', {
           fiat: fiat.code,
           open: candle.open,
           high: candle.high,
