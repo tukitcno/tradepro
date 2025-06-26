@@ -66,20 +66,30 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
-  try {
-    await initDatabase();
-    console.log('Database initialized successfully');
-    
-    // Start price engine
-    startPriceEngine(io);
-    console.log('Price engine started');
-    
-    server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+  let retries = 5;
+  
+  while (retries > 0) {
+    try {
+      await initDatabase();
+      console.log('Database initialized successfully');
+      
+      // Start price engine
+      startPriceEngine(io);
+      console.log('Price engine started');
+      
+      server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+      return;
+    } catch (error) {
+      console.error(`Database connection failed. Retries left: ${retries - 1}`, error.message);
+      retries--;
+      if (retries === 0) {
+        console.error('Failed to start server after all retries');
+        process.exit(1);
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   }
 }
 

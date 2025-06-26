@@ -7,3 +7,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+databases:
+  - name: tradex-db
+    databaseName: tradex
+    user: tradex

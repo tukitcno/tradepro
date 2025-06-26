@@ -22,6 +22,55 @@ router.post('/send-otp', async (req, res) => {
   }
 });
 
+// Login with password
+router.post('/login-password', async (req, res) => {
+  const { identifier, password } = req.body;
+  
+  try {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmail = emailRegex.test(identifier);
+    
+    const userQuery = isEmail 
+      ? 'SELECT * FROM users WHERE email = $1'
+      : 'SELECT * FROM users WHERE phone = $1';
+    
+    const result = await pool.query(userQuery, [identifier]);
+    const user = result.rows[0];
+
+    if (!user || !user.password) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const validPassword = await bcrypt.compare(password, user.password);
+    
+    if (!validPassword) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        balance: parseFloat(user.balance)
+      }
+    });
+  } catch (error) {
+    console.error('Password login error:', error);
+    res.status(500).json({ message: 'Login failed' });
+  }
+});
+
 // Login with OTP
 router.post('/login', async (req, res) => {
   const { identifier, otp } = req.body;

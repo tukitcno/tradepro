@@ -7,6 +7,7 @@ import Wallet from './pages/Wallet';
 import Referral from './pages/Referral';
 import AdminCMS from './pages/AdminCMS';
 import { AuthProvider, useAuth } from './components/AuthContext';
+import Debug from './components/Debug';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ function App() {
       <Router>
         <div className="App">
           <Toaster position="top-right" />
+          <Debug />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={

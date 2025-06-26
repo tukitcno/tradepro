@@ -95,12 +95,22 @@ npm run build
 
 ### Backend (Render)
 
-1. Connect your GitHub repository to Render
-2. Create a new Web Service
-3. Set build command: `npm install`
-4. Set start command: `npm start`
-5. Add environment variables in Render dashboard
-6. Deploy
+**Option 1: Manual Setup**
+1. Create PostgreSQL database in Render
+2. Create Web Service and connect to GitHub
+3. Set root directory: `backend`
+4. Set build command: `npm install`
+5. Set start command: `node server.js`
+6. Add environment variables:
+   - `DATABASE_URL`: (from Render PostgreSQL dashboard)
+   - `JWT_SECRET`: Your secret key
+   - `FRONTEND_URL`: Your Vercel URL
+7. Deploy
+
+**Option 2: Use render.yaml**
+- Place `render.yaml` in project root
+- Automatically creates database and web service
+- Add environment variables in Render dashboard after deployment
 
 ### Frontend (Vercel)
 
@@ -161,7 +171,8 @@ npm run build
 ## 🎯 Demo Credentials
 
 - **OTP**: Use `123456` for any phone/email
-- **Admin Access**: Create user with role 'admin' in database
+- **Admin Demo Account**: `admin@tradex.com` / `admin321`
+- **User Demo Account**: `demo@tradex.com` / `user321`
 - **Initial Balance**: $1000 for new users
 
 ## 🔒 Security Features

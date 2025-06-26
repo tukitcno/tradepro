@@ -16,8 +16,20 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  
+  // Test API connection
+  const testConnection = async () => {
+    try {
+      await axios.get(`${API_URL}/health`);
+      console.log('API connection successful');
+    } catch (error) {
+      console.error('API connection failed:', error.message);
+      console.error('API URL:', API_URL);
+    }
+  };
 
   useEffect(() => {
+    testConnection();
     const token = localStorage.getItem('token');
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -36,6 +48,21 @@ export const AuthProvider = ({ children }) => {
       delete axios.defaults.headers.common['Authorization'];
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loginWithPassword = async (identifier, password) => {
+    try {
+      const response = await axios.post(`${API_URL}/api/auth/login-password`, { identifier, password });
+      const { token, user } = response.data;
+      
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setUser(user);
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Login failed' };
     }
   };
 
@@ -73,6 +100,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    loginWithPassword,
     sendOTP,
     logout,
     API_URL
